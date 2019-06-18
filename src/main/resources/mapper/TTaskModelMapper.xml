@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="UTF-8"?>
+        <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.demo.mapper.TTaskMapper">
+    <resultMap id="TTaskModelResultMap" type="com.example.demo.model.TTaskModel">
+        <result column="task_id" property="taskId" jdbcType="VARCHAR" />
+        <result column="task_p_id" property="taskPId" jdbcType="VARCHAR" />
+        <result column="plan_id" property="planId" jdbcType="VARCHAR" />
+        <result column="name" property="name" jdbcType="VARCHAR" />
+        <result column="assign_id" property="assignId" jdbcType="VARCHAR" />
+        <result column="begin_date" property="beginDate" jdbcType="INTEGER" />
+        <result column="end_date" property="endDate" jdbcType="INTEGER" />
+        <result column="leader_id" property="leaderId" jdbcType="VARCHAR" />
+        <result column="attachment_url" property="attachmentUrl" jdbcType="VARCHAR" />
+        <result column="state" property="state" jdbcType="INTEGER" />
+        <result column="task_desc" property="taskDesc" jdbcType="VARCHAR" />
+    </resultMap>
+    <select id="selectTaskPage" resultType="com.example.demo.model.TTaskModel">
+        select * from t_task a left join t_plan b on a.plan_id = b.plan_id
+        <if test= "tv.taskType == 'IS_MY'">
+            left join t_task_play c on a.task_id = c.task_id
+        </if>
+        where 1=1
+        <if test= "tv.taskType == 'IS_MY'">
+            and c.play_id = #{tv.currentUserId}
+        </if>
+        <if test="tv.startDate != null">
+            and a.begin_date >= #{tv.startDate}
+        </if>
+        <if test="tv.endDate != null">
+            and  a.end_date <![CDATA[ <= ]]> #{tv.endDate}
+        </if>
+        <if test="tv.planName != null and tv.planName != ''">
+            and  (b.name like concat(#{tv.planName},'%') or a.name like concat(#{tv.planName},'%')  )
+        </if>
+        <if test="tv.taskStatus != 0">
+            and a.state = #{tv.taskStatus}
+        </if>
+        <if test="tv.schoolYear != null and tv.schoolYear != '' and tv.schoolYear != 'all'">
+            and b.school_semester like  concat(#{tv.schoolYear},'%')
+        </if>
+        <if test="tv.taskType == 'MY_DISPATCH'">
+           and  a.assign_id = #{tv.currentUserId}
+        </if>
+        <if test="tv.taskType == 'MY_CHARGE'">
+           and  a.leader_id = #{tv.currentUserId}
+        </if>
+
+
+    </select>
+    <select id="selectSubTaskList"  resultType="com.example.demo.model.TTaskModel">
+        SELECT
+            *
+        FROM
+            (
+                SELECT
+                    T1.*,
+                    IF
+                        (
+                            FIND_IN_SET( task_p_id, @PIDS ) > 0,
+                            @PIDS := CONCAT( @PIDS, ',', T1.task_id ),
+                            0
+                        ) AS ISCHILD
+                FROM
+                        ( SELECT A.* FROM t_task A ) AS T1,
+                        ( SELECT @PIDS := #{taskPid}) t2
+            ) t3
+        WHERE
+            ISCHILD != 0
+    </select>
+
+</mapper>
